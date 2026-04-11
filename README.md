@@ -114,16 +114,17 @@ sudo mokutil --import /var/lib/shim-signed/mok/MOK.der
 # Reboot — MokManager will prompt you to enroll the key
 
 # After reboot, sign the module
-sudo /usr/src/linux-headers-$(uname -r)/scripts/sign-file sha256 \
-  /var/lib/shim-signed/mok/MOK.priv \
-  /var/lib/shim-signed/mok/MOK.der \
-  /lib/modules/$(uname -r)/updates/wireview_hwmon.ko
+sudo make install \
+  MODULE_SIGN_KEY=/var/lib/shim-signed/mok/MOK.priv \
+  MODULE_SIGN_CERT=/var/lib/shim-signed/mok/MOK.der
 
 # Now it loads
 sudo modprobe wireview_hwmon
 ```
 
-You only need to generate and enroll the key once. After a kernel update, re-sign the module or rebuild with `sudo make install` and sign again.
+This installs the module into `/lib/modules/$(uname -r)/updates/`, signs it before compression, and refreshes the module dependency database. You only need to generate and enroll the key once. After a kernel update, rerun `sudo make install` with the same signing variables.
+
+On LLVM-built kernels such as Arch/CachyOS, plain `make` automatically uses the kernel's LLVM toolchain for the module build while keeping the userspace tools on the normal host compiler.
 
 ## Uninstall
 
