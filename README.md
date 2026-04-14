@@ -42,6 +42,8 @@ sudo apt install ./wireview-hwmon_1.0_amd64.deb ./wireview-hwmon-dkms_1.0_all.de
 - A Thermal Grizzly WireView Pro II device connected via USB
 - `gcc` and `make`
 
+On Arch-based systems, install the matching kernel headers for your running kernel and `dkms` if you want the module to rebuild automatically on kernel upgrades.
+
 ## Build
 
 ```bash
@@ -89,6 +91,46 @@ sensors wireview-isa-0000
 ```
 
 After rebooting, both the module and daemon will start automatically.
+
+### Arch Linux / CachyOS with DKMS
+
+For Arch-based distributions, the most reliable setup is DKMS plus module signing. Once configured, `pacman` and `paru` kernel upgrades trigger DKMS rebuilds automatically through the hooks shipped by the `dkms` package.
+
+```bash
+sudo pacman -S --needed dkms
+make dkms-install
+```
+
+This target installs the source into `/usr/src`, configures DKMS signing with your existing key, registers the module, installs it for the currently installed kernels, switches the current boot over to the DKMS-managed copy, and ensures the module auto-loads on boot.
+
+Equivalent manual steps:
+
+```bash
+
+# Tell DKMS which key to use when signing rebuilt modules
+sudo install -d /etc/dkms/framework.conf.d
+cat <<'EOF' | sudo tee /etc/dkms/framework.conf.d/wireview-hwmon-signing.conf
+mok_signing_key=/var/lib/shim-signed/mok/MOK.priv
+mok_certificate=/var/lib/shim-signed/mok/MOK.der
+try_sign_modules=true
+EOF
+
+# Install the source into /usr/src for DKMS
+sudo rm -rf /usr/src/wireview-hwmon-1.3.1
+sudo mkdir -p /usr/src/wireview-hwmon-1.3.1
+sudo cp -r . /usr/src/wireview-hwmon-1.3.1
+
+# Register and install for the current kernel
+sudo dkms add -m wireview-hwmon -v 1.3.1
+sudo dkms install -m wireview-hwmon -v 1.3.1
+
+# Load now and on future boots
+echo wireview_hwmon | sudo tee /etc/modules-load.d/wireview-hwmon.conf
+sudo modprobe wireview_hwmon
+sudo systemctl enable --now wireviewd
+```
+
+After each kernel update, DKMS rebuilds and signs the module for the new kernel automatically. If the source changes, replace `/usr/src/wireview-hwmon-1.3.1` with the updated tree and rerun `sudo dkms install -m wireview-hwmon -v 1.3.1`.
 
 ### Secure Boot
 

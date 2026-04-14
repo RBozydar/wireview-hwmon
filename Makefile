@@ -55,6 +55,9 @@ install: all
 	udevadm control --reload-rules
 	systemctl daemon-reload
 
+dkms-install:
+	./scripts/setup-dkms-arch.sh
+
 uninstall:
 	systemctl stop wireviewd 2>/dev/null || true
 	systemctl disable wireviewd 2>/dev/null || true
@@ -67,4 +70,4 @@ uninstall:
 	udevadm control --reload-rules
 	systemctl daemon-reload
 
-.PHONY: all module clean install uninstall
+.PHONY: all module clean install dkms-install uninstall
